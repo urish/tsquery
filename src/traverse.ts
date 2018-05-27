@@ -5,15 +5,23 @@ import { TSQueryNode, TSQueryTraverseOptions } from './tsquery-types';
 // Constants:
 const FILTERED_KEYS: Array<string> = ['parent'];
 const LITERAL_KINDS: Array<SyntaxKind> = [
-    SyntaxKind.FirstLiteralToken,
     SyntaxKind.FalseKeyword,
-    SyntaxKind.LastLiteralToken,
+    SyntaxKind.NoSubstitutionTemplateLiteral,
     SyntaxKind.NullKeyword,
     SyntaxKind.NumericLiteral,
     SyntaxKind.RegularExpressionLiteral,
     SyntaxKind.StringLiteral,
     SyntaxKind.TrueKeyword
 ];
+const PARSERS: { [key: number]: (node: TSQueryNode) => any } = {
+    [SyntaxKind.FalseKeyword]: () => false,
+    [SyntaxKind.NoSubstitutionTemplateLiteral]: (node: TSQueryNode) => node.text,
+    [SyntaxKind.NullKeyword]: () => null,
+    [SyntaxKind.NumericLiteral]: (node: TSQueryNode) => +node.text,
+    [SyntaxKind.RegularExpressionLiteral]: (node: TSQueryNode) => new RegExp(node.text),
+    [SyntaxKind.StringLiteral]: (node: TSQueryNode) => node.text,
+    [SyntaxKind.TrueKeyword]: () => true
+};
 
 export function traverse<T extends Node = Node> (node: Node | TSQueryNode<T>, options: TSQueryTraverseOptions<T>): void {
     addProperties(node as TSQueryNode<T>);
@@ -45,41 +53,8 @@ export function addProperties (node: TSQueryNode): void {
     }
 
     if (isNotSet(node, 'value') && LITERAL_KINDS.includes(node.kind)) {
-        node.value = parseType(node);
+        node.value = PARSERS[node.kind](node);
     }
-}
-
-export function parseType (node: TSQueryNode): any {
-    // String:
-    if ([SyntaxKind.StringLiteral, SyntaxKind.NoSubstitutionTemplateLiteral].indexOf(node.kind) >= 0) {
-        return node.text;
-    }
-
-    // Boolean:
-    if (node.text === 'true') {
-        return true;
-    }
-    if (node.text === 'false') {
-        return false;
-    }
-
-    // Null:
-    if (node.text === 'null') {
-        return null;
-    }
-
-    // Number:
-    const maybeNumber = +node.text;
-    if (!isNaN(maybeNumber)) {
-        return maybeNumber;
-    }
-
-    // RegExp:
-    if (node.text.startsWith('/') && node.text.endsWith('/')) {
-        return new RegExp(node.text);
-    }
-
-    return node.text;
 }
 
 function isNotSet (object: any, property: string): boolean {
