@@ -1,10 +1,5 @@
 // Test Utilities:
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
-
-// Test setup:
-const { expect } = chai;
-chai.use(sinonChai);
+import { expect } from './index';
 
 // Dependencies:
 import { BinaryExpression, Block, CallExpression, ExpressionStatement, IfStatement, SyntaxKind } from 'typescript';
@@ -29,6 +24,14 @@ describe('tsquery:', () => {
                 ((((ast.statements[1] as IfStatement).thenStatement as Block).statements[0] as ExpressionStatement).expression as BinaryExpression).left,
                 (((((ast.statements[1] as IfStatement).elseStatement as IfStatement).thenStatement as Block).statements[0] as ExpressionStatement).expression as BinaryExpression).left
             ]);
+        });
+
+        it('should throw if an invalid SyntaxKind is used', () => {
+            const ast = tsquery.ast(conditional);
+
+            expect(() => {
+                tsquery(ast, 'FooBar');
+            }).to.throw('"FooBar" is not a valid TypeScript Node kind.');
         });
     });
 });
